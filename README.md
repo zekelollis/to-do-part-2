@@ -1,81 +1,64 @@
-# To-Do — revised
+# To-Do — shared edition
 
-One task now. Two on deck. A place for everything you’re waiting on.
+The same focus desk, now with shared tasks and server-verified sign-in. Start with **SETUP.md** before deploying this version.
 
-This revision keeps the original app’s paper-and-brass character and adds a calmer focus screen, readable dark mode, task inspection, recovery, and safer device-local saving.
+## Included
 
-## Run or deploy
+- One shared task list across signed-in computers and phones.
+- Password checked by a Vercel server function. It is not embedded in the browser bundle.
+- Remember this browser for 90 days; unchecked means a 12-hour session.
+- Secure, HttpOnly, host-only cookies; server-side expiration and sign-out revocation.
+- Sign-in rate limiting and same-origin checks on writes.
+- Existing focus screen, deck, waiting lane, notes, flags, history, shuffle, and backup tools.
+- A prompt to bring older browser tasks into the shared list; original browser copies are left intact.
+- Changes refresh about every 20 seconds while visible, and when you return to the app.
+- Concurrent saves use an atomic Redis compare-and-set. Interrupted saves can be retried with the same operation ID to avoid applying an action twice.
+- Conflicting edits to the same task are rejected with a message; undo refuses to overwrite intervening changes.
 
-Requires a current Node.js LTS release and npm.
+This is a **single private desk with one shared password**, not separate accounts for multiple users. Everyone with the password sees and can edit the same tasks.
+
+## Run locally
+
+Use Node.js 22 LTS or later. Copy `.env.example` to `.env.local` and enter credentials for a separate development database and password. Never commit that file.
 
 ```sh
 npm ci
 npm run dev
 ```
 
-For a production build:
-
-```sh
-npm run build
-```
-
-Deploy to Vercel using the **Vite** preset. Build command: `npm run build`. Output directory: `dist`. No database account or environment variables are needed.
-
-Upload the contents of this folder to your repository, including `src`, `public`, and `package-lock.json`. Do not upload `node_modules`. The included `dist` directory is also a ready-built static copy; serve it through a web host, rather than double-clicking the HTML file.
-
-## Existing tasks
-
-When deployed at the same address and opened in the same browser as the original Now app, the revised app automatically reads `now:state:v2` on first use. It saves the migrated tasks separately in IndexedDB and leaves the old localStorage copy untouched. Your old app can still read its original snapshot, but new changes are not written back to the old version.
-
-A different hostname, browser, or device has a separate task store. Use **Your desk → Export backup** on the revised app to move tasks, then **Import backup** on the other device. Home-screen browser containers may also have separate stores.
-
-Import accepts Now version 2 and version 3 JSON state backups. On an empty desk it restores the backup’s tasks, deck, flags, and focus. On an existing desk it adds new IDs and keeps existing records unchanged. It is a merge, not a cross-device synchronization service. Completed and trashed records also retain their IDs.
-
-If the old saved data cannot be read, the app stops migration and provides a retry/export option rather than silently replacing it.
-
-## What changed
-
-- One large focus card, a two-slot deck, and a compact periphery.
-- Task inspection and explicit save/cancel without changing the current focus.
-- Five short notes per task, up to 120 characters per note.
-- Dedicated owner field for waiting tasks, including clearing an owner.
-- “Still working” renews the 90-minute focus check-in.
-- Head-to-head shuffle, up to five choices. The winner of this round becomes NOW; old weights no longer overrule it. Least-recently-shown candidates get turns.
-- Completed tasks and dropped tasks stay in History and can be restored.
-- Undo protects against reverting intervening changes, including other tabs.
-- IndexedDB read/write transactions serialize changes against the latest state. BroadcastChannel updates other open tabs; focus/visibility refresh provides a fallback. There is no polling or server synchronization.
-- Edits to the same task detect conflicting changes and ask you to reopen it; unrelated task changes are preserved.
-- Waiting tasks sort by follow-up time. Reminders are in-app only, not scheduled background notifications.
-- Export/import, visible save failures, and explicit notices when flags or deck slots are displaced.
-- Native modal dialogs provide keyboard focus containment and Escape handling.
-- Ordinary capture preserves @mentions and email addresses. Waiting capture recognizes standalone @name tokens.
-- Responsive lists, larger controls, and separate background/card text colors in dark mode.
-
-## Keyboard shortcuts
-
-`/` capture · `S` shuffle · `X` done · `N` not this · `F` flag · `E` edit · `D` notes · `W` waiting on · `Esc` back.
-
-During shuffle, `1` or `2` chooses a task. Global shortcuts are suspended while typing or editing. Task completion shortcuts work on the focus view only.
-
-## Screen privacy
-
-**Hide screen** is a visual curtain with a return button. It does not secure or encrypt task data.
-
-The original optional `VITE_NOW_PASSPHRASE` gate is retained. Its value is embedded in the client bundle and is not authentication. The passphrase lock action is shown only when the variable is configured. Device and browser security protect the locally stored data.
-
-## Verification and code map
+The Vite development configuration serves `/api/session` and `/api/tasks` locally. Vercel runs `api/` as server functions in production.
 
 ```sh
 npm test
 npm run build
 ```
 
-`src/model.js` contains task transitions and shuffle selection. `src/storage.js` owns migration and atomic persistence. `src/useDesk.js` connects saving and cross-tab refresh to React. `src/components.jsx` owns task editing and dialogs. `src/App.jsx` composes the working surface. `src/styles.css` contains both themes and responsive layouts.
+`npm run preview` serves the static build only; it does not run the shared-task APIs. The `dist` folder alone is no longer a working deployment. Deploy the entire source project to Vercel.
 
-Tests cover parsing, deck advancement, task recovery, shuffle fairness, latest-round choice, import validation, same-task conflicts, migration, concurrent writes, rejected writes, and guarded undo. Storage tests use an IndexedDB implementation for Node. Browser/device end-to-end testing has not been performed in this revision.
+## Data and privacy
 
-Google Fonts enhance the typography when available; system fallbacks work without them. No service worker is included, so offline page loading is not guaranteed.
+Tasks are stored in your dedicated Upstash Redis database under `{todo}:state`, with no expiration. Keep database eviction disabled so it acts as a durable store rather than a disposable cache. Export backups periodically. Sessions expire after 90 days (or 12 hours); sign-out deletes that browser’s session. Changing `TODO_PASSWORD` and redeploying invalidates existing sessions on the new deployment. Older deployments may still use their older configuration; see SETUP.md.
 
-## September 10 layout update
+Cookies, passwords, and database tokens are never put in the task export. Server credentials do not use the `VITE_` prefix. New cloud tasks are not written to browser localStorage/IndexedDB; old local copies are retained for recovery. Those older copies remain accessible to someone with access to that browser profile.
 
-Renamed the app to To-Do, removed the introductory heading above the focus card, and moved the date into the header. Task storage identifiers remain compatible with the previous release.
+An internet connection is needed to save. There is no background offline queue. If a save is unconfirmed, the app keeps the current draft open and asks you to retry before another change. Keep the tab open until the pending save resolves. Operation deduplication is retained for 24 hours; do not leave an unresolved save pending longer than that. Exported backups are plain JSON containing your tasks.
+
+This app uses your Vercel and Upstash accounts. Provider pricing and storage/command limits apply. A visible app checks tasks every 20 seconds, so choose a plan based on actual use. There are no push notifications; waiting reminders appear inside the app.
+
+## Code map
+
+- `api/session.js`: sign-in, session validation, sign-out.
+- `api/tasks.js`: authenticated shared reads and mutations.
+- `server/core.js`: Redis REST access, cookies, origin checks, rate limiting, atomic saves.
+- `src/AuthGate.jsx`: sign-in screen and session visibility.
+- `src/cloud.js`: same-origin API client.
+- `src/useDesk.js`: synchronization, pending-save retry, guarded undo.
+- `src/storage.js`: retained local store, used only to recover/import older tasks.
+- `src/model.js`: task transitions and shuffle selection.
+- `src/components.jsx`, `src/App.jsx`, `src/styles.css`: the working surface.
+
+## Verification
+
+23 automated tests pass, covering model behavior, original local migration, API authorization, forged cookies, cookie flags/expiry, password changes, rate limiting, cross-origin refusal, shared reads, concurrent writes, deduplication, guarded undo, logout, and database failures.
+
+The server tests use a Redis REST contract double. They do not substitute for a live Upstash/Vercel check. The production frontend build passes. Real database connectivity, Vercel function deployment, and browser/device end-to-end behavior must be checked after configuration using the short walkthrough in SETUP.md.

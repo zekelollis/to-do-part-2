@@ -7,7 +7,7 @@ export function Icon({name,size=18,...props}) {
 }
 export function Modal({title,children,onClose,wide=false}) {
   const ref=useRef(null);
-  useEffect(()=>{const prior=document.activeElement;ref.current.showModal();return()=>{ref.current?.close();if(prior?.isConnected) prior.focus();};},[]);
+  useEffect(()=>{const prior=document.activeElement;ref.current.showModal();const hide=()=>ref.current?.close();const show=()=>{if(ref.current&&!ref.current.open)ref.current.showModal();};window.addEventListener('todo:hide-content',hide);window.addEventListener('todo:show-content',show);return()=>{window.removeEventListener('todo:hide-content',hide);window.removeEventListener('todo:show-content',show);ref.current?.close();if(prior?.isConnected) prior.focus();};},[]);
   return <dialog ref={ref} className={`dialog ${wide?'dialog-wide':''}`} aria-labelledby="dialog-title" onCancel={e=>{e.preventDefault();onClose();}} onClick={e=>{if(e.target===e.currentTarget){const r=e.currentTarget.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)onClose();}}}>
     <div className="dialog-head"><h2 id="dialog-title">{title}</h2><button className="icon-button" onClick={onClose} aria-label="Close dialog"><Icon name="close"/></button></div>{children}
   </dialog>;
@@ -18,7 +18,7 @@ export function dueLabel(task,now=Date.now()) {
   if(delta<DAY) return 'Check in within a day';
   return `Check in ${Math.ceil(delta/DAY)} days`;
 }
-export function TaskEditor({task,state,act,onClose,initialFocus}) {
+export function TaskEditor({task,state,act,onClose,initialFocus,retrySave,pendingSave=false}) {
   const [title,setTitle]=useState(task.title);
   const [who,setWho]=useState(task.who || '');
   const [days,setDays]=useState(task.checkDays || 2);
@@ -29,20 +29,20 @@ export function TaskEditor({task,state,act,onClose,initialFocus}) {
   const [discard,setDiscard]=useState(false);
   const noteRef=useRef(null);
   useEffect(()=>{if(initialFocus==='details')noteRef.current?.focus();},[]);
-  const close=()=>dirty ? setDiscard(true) : onClose();
-  const save=async(e)=>{e.preventDefault();setWorking(true);const ok=await act({type:'edit',id:task.id,title,who,checkDays:Number(days),details:details.filter(x=>x.trim()),expectedTask:JSON.stringify(task)});setWorking(false);if(ok)onClose();else setLocalError('Changes could not be saved. Your draft is still here. Close this panel to see the error, or try again.');};
+  const close=()=>{if(working||pendingSave){setLocalError('Please finish or retry the pending save before closing this draft.');return;}dirty ? setDiscard(true) : onClose();};
+  const save=async(e)=>{e.preventDefault();setWorking(true);const ok=await act({type:'edit',id:task.id,title,who,checkDays:Number(days),details:details.filter(x=>x.trim()),expectedTask:JSON.stringify(task)});setWorking(false);if(ok)onClose();else setLocalError('Changes could not be saved. Your draft is still here. If another device edited this task, close and reopen it. Otherwise retry below.');};
   const action=async(type)=>{setWorking(true);const ok=await act({type,id:task.id});setWorking(false);if(ok)onClose();else setLocalError('That action could not be saved. Please try again.');};
   const archived=task.done || task.deletedAt;
   return <Modal title={archived ? (task.deletedAt?'In the trash':'Completed') : task.kind==='wait'?'Waiting on':'Task details'} onClose={close}>
     {discard ? <div className="discard"><h3>Keep these edits?</h3><p>You have changes that haven’t been saved.</p><div className="button-row"><button onClick={()=>setDiscard(false)}>Keep editing</button><button className="danger" onClick={onClose}>Discard edits</button></div></div> : <>
     <form onSubmit={save} className="editor">
-      <label>Task<input autoFocus={initialFocus!=='details'} value={title} onChange={e=>setTitle(e.target.value)} required maxLength={500}/></label>
-      {task.kind==='wait' && <div className="field-pair"><label>Who has it?<input value={who} onChange={e=>setWho(e.target.value)} placeholder="Name (optional)" maxLength={100}/></label><label>Check back<select value={days} onChange={e=>setDays(Number(e.target.value))}>{[1,2,3,7].map(n=><option key={n} value={n}>Every {n} day{n===1?'':'s'}</option>)}</select></label></div>}
+      <label>Task<input disabled={working||pendingSave} autoFocus={initialFocus!=='details'} value={title} onChange={e=>setTitle(e.target.value)} required maxLength={500}/></label>
+      {task.kind==='wait' && <div className="field-pair"><label>Who has it?<input disabled={working||pendingSave} value={who} onChange={e=>setWho(e.target.value)} placeholder="Name (optional)" maxLength={100}/></label><label>Check back<select disabled={working||pendingSave} value={days} onChange={e=>setDays(Number(e.target.value))}>{[1,2,3,7].map(n=><option key={n} value={n}>Every {n} day{n===1?'':'s'}</option>)}</select></label></div>}
       <div className="notes-heading"><span>Notes</span><span className="muted">Five short lines, just what you need.</span></div>
-      {details.map((line,i)=><div className="note-input" key={i}><span className="note-mark"/><input ref={i===0?noteRef:null} value={line} maxLength={DETAIL_LEN} aria-label={`Note ${i+1}`} placeholder="A useful detail…" onChange={e=>setDetails(details.map((x,j)=>i===j?e.target.value:x))}/><button type="button" className="icon-button" aria-label={`Remove note ${i+1}`} onClick={()=>setDetails(details.filter((_,j)=>j!==i))}><Icon name="close" size={15}/></button></div>)}
-      {details.length<DETAIL_MAX && <button type="button" className="text-button" onClick={()=>setDetails([...details,''])}><Icon name="plus" size={15}/>Add a line</button>}
-      {localError && <p role="alert" className="form-error">{localError}</p>}
-      <div className="editor-save"><button type="button" className="text-button" onClick={close}>Cancel</button><button className="primary" disabled={working || !title.trim()}>Save changes<Icon name="check" size={16}/></button></div>
+      {details.map((line,i)=><div className="note-input" key={i}><span className="note-mark"/><input disabled={working||pendingSave} ref={i===0?noteRef:null} value={line} maxLength={DETAIL_LEN} aria-label={`Note ${i+1}`} placeholder="A useful detail…" onChange={e=>setDetails(details.map((x,j)=>i===j?e.target.value:x))}/><button type="button" className="icon-button" disabled={working||pendingSave} aria-label={`Remove note ${i+1}`} onClick={()=>setDetails(details.filter((_,j)=>j!==i))}><Icon name="close" size={15}/></button></div>)}
+      {details.length<DETAIL_MAX && <button type="button" disabled={working||pendingSave} className="text-button" onClick={()=>setDetails([...details,''])}><Icon name="plus" size={15}/>Add a line</button>}
+      {localError && <div><p role="alert" className="form-error">{localError}</p><button type="button" onClick={retrySave}>Retry connection / pending save</button></div>}
+      <div className="editor-save"><button type="button" className="text-button" onClick={close}>Cancel</button><button className="primary" disabled={working || pendingSave || !title.trim()}>Save changes<Icon name="check" size={16}/></button></div>
     </form>
     <div className="editor-actions"><span className="eyebrow">{dirty?'Save or cancel edits to use task actions':'Move this forward'}</span><div className="button-row">
     {archived ? <button disabled={working||dirty} onClick={()=>action('restore')}>Restore task</button> : task.kind==='wait' ? <><button disabled={working||dirty} onClick={()=>action('nudge')}>Nudged</button><button disabled={working||dirty} onClick={()=>action('takeback')}>Take it back</button><button disabled={working||dirty} onClick={()=>action('done')}>Landed<Icon name="check" size={15}/></button></> : <>
