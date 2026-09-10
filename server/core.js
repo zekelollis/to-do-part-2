@@ -6,8 +6,8 @@ const digest=value=>createHash('sha256').update(value).digest('hex');
 export class HttpError extends Error {constructor(status,message){super(message);this.status=status;}}
 export function settings(){
  const password=process.env.TODO_PASSWORD;
- const url=process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
- const token=process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
+ const url=process.env.to_do_part_2_KV_REST_API_URL || process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
+ const token=process.env.to_do_part_2_KV_REST_API_TOKEN || process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
  if(!password || password.length<12 || !url || !token)throw new HttpError(503,'Setup is not finished. Connect the database and set TODO_PASSWORD in Vercel, then redeploy.');
  if(!url.startsWith('https://'))throw new HttpError(503,'The database connection needs an HTTPS REST URL.');
  return {password,url,token};
