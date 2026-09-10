@@ -1,0 +1,25 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import 'fake-indexeddb/auto';
+import {readState,commit,openDatabase} from '../src/storage.js';
+const old={v:2,tasks:[{id:'legacy',title:'Existing task',kind:'do',done:false,weight:4}],deck:[],flagged:['legacy'],nowId:'legacy',nowSetAt:1000};
+const original=JSON.stringify(old);
+globalThis.localStorage={getItem:key=>key==='now:state:v2'?original:null};
+test('migration, concurrent writes, failure and undo are safe',async()=>{
+ const loaded=await readState();assert.equal(loaded.tasks[0].id,'legacy');assert.deepEqual(loaded.flagged,['legacy']);assert.equal(localStorage.getItem('now:state:v2'),original);
+ await Promise.all(Array.from({length:25},(_,i)=>commit({type:'add',id:'task-'+i,title:'Task '+i,kind:'do'})));
+ const both=await readState();assert.equal(both.tasks.length,26);assert.equal(both.revision,25);
+ const completed=await commit({type:'done',id:'legacy'});
+ await commit({type:'add',id:'later',title:'Another tab',kind:'do'});
+ await assert.rejects(commit({type:'undo',expectedRevision:completed.state.revision,previous:completed.previous}),/Another change/);
+ assert.ok((await readState()).tasks.some(t=>t.id==='later'));
+ const dropped=await commit({type:'drop',id:'later'});
+ await commit({type:'undo',expectedRevision:dropped.state.revision,previous:dropped.previous});
+ assert.equal((await readState()).tasks.find(t=>t.id==='later').deletedAt,null);
+ const before=await readState();await assert.rejects(commit({type:'import',state:{v:3,tasks:[{}]}}));assert.deepEqual(await readState(),before);
+ const task=(await readState()).tasks.find(t=>t.id==='later');
+ await commit({type:'edit',id:task.id,expectedTask:JSON.stringify(task),title:'Edited',who:'',details:['Note'],checkDays:2});
+ assert.equal((await readState()).tasks.find(t=>t.id==='later').title,'Edited');
+ const db=await openDatabase();db.close();
+ await assert.rejects(commit({type:'done',id:'later'}));
+});
