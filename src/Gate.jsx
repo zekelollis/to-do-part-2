@@ -85,7 +85,7 @@ export default function Gate({ children }) {
             letterSpacing: "-0.02em",
           }}
         >
-          Now
+          To-Do
         </div>
         <div
           style={{

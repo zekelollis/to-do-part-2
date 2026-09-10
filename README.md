@@ -1,4 +1,4 @@
-# Now — revised
+# To-Do — revised
 
 One task now. Two on deck. A place for everything you’re waiting on.
 
@@ -75,3 +75,7 @@ npm run build
 Tests cover parsing, deck advancement, task recovery, shuffle fairness, latest-round choice, import validation, same-task conflicts, migration, concurrent writes, rejected writes, and guarded undo. Storage tests use an IndexedDB implementation for Node. Browser/device end-to-end testing has not been performed in this revision.
 
 Google Fonts enhance the typography when available; system fallbacks work without them. No service worker is included, so offline page loading is not guaranteed.
+
+## September 10 layout update
+
+Renamed the app to To-Do, removed the introductory heading above the focus card, and moved the date into the header. Task storage identifiers remain compatible with the previous release.
