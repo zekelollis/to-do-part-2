@@ -83,3 +83,13 @@ test('missing configuration and database failure fail closed',async()=>{
  delete process.env.TODO_PASSWORD;assert.equal((await call(sessionHandler)).statusCode,503);process.env.TODO_PASSWORD='test-only-long-passphrase';
  const cookie=await signIn();globalThis.fetch=async()=>{throw Error('network down');};const r=await change(cookie,{type:'add',id:'a',title:'A',kind:'do'});assert.equal(r.statusCode,503);assert.equal(records.has('{todo}:state'),false);
 });
+
+test('new card notes and follow-up fields persist together across devices',async()=>{
+ const a=await signIn('192.0.2.1'),b=await signIn('192.0.2.2');
+ const result=await change(a,{type:'add',id:'notes',title:'Review file',kind:'wait',who:'Alex',checkDays:7,details:['  Check attachments  ','','Call client']});
+ assert.equal(result.statusCode,200);
+ const task=(await call(tasksHandler,{cookie:b})).body.state.tasks[0];
+ assert.equal(task.title,'Review file');assert.equal(task.who,'Alex');assert.equal(task.checkDays,7);assert.deepEqual(task.details,['Check attachments','Call client']);
+ const bad=await change(a,{type:'add',id:'bad',title:'Invalid notes',kind:'do',details:['x'.repeat(121)]});
+ assert.equal(bad.statusCode,400);assert.equal((await call(tasksHandler,{cookie:b})).body.state.tasks.length,1);
+});

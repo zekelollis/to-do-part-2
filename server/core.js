@@ -80,6 +80,7 @@ export function validateAction(a){
  if(!['theme','import','undo'].includes(a.type) && (typeof a.id!=='string'||a.id.length>100))throw new HttpError(400,'Choose a valid task.');
  if(['add','edit'].includes(a.type) && (typeof a.title!=='string'||!a.title.trim()||a.title.length>500))throw new HttpError(400,'Use a task title of 1–500 characters.');
  if(a.type==='add'&&!['do','wait'].includes(a.kind))throw new HttpError(400,'Choose a task type.');
+ if(a.type==='add' && ((a.details!==undefined&&(!Array.isArray(a.details)||a.details.length>5||a.details.some(x=>typeof x!=='string'||x.length>120)))||(a.who!==undefined&&(typeof a.who!=='string'||a.who.length>100))||(a.checkDays!==undefined&&![1,2,3,7].includes(a.checkDays))))throw new HttpError(400,'Check the new card’s notes and follow-up window.');
  if(a.type==='edit' && (typeof a.who!=='string'||a.who.length>100||!Array.isArray(a.details)||a.details.length>5||a.details.some(x=>typeof x!=='string'||x.length>120)||![1,2,3,7].includes(a.checkDays)))throw new HttpError(400,'Check the task’s notes and follow-up window.');
  if(a.type==='shuffleChoice' && (!Array.isArray(a.ids)||a.ids.length!==2||a.ids.some(x=>typeof x!=='string')||!a.ids.includes(a.id)))throw new HttpError(400,'Choose a task from this round.');
  if(a.type==='theme'&&!['light','dark'].includes(a.theme))throw new HttpError(400,'Choose a theme.');

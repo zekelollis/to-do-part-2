@@ -17,6 +17,7 @@ export function parseWho(raw) {
   return match ? {title:raw.replace(match[0], ' ').replace(/\s+/g,' ').trim(), who:match[1]} : {title:raw.trim(), who:''};
 }
 
+
 export function normalize(input) {
   if (!input || !Array.isArray(input.tasks) || ![2,3].includes(input.v)) throw Error('This is not a supported Now backup. Choose a version 2 or 3 backup.');
   if (input.tasks.length > 20000) throw Error('This backup is too large.');
@@ -27,7 +28,7 @@ export function normalize(input) {
     seen.add(t.id);
     return {...t, title:t.title.trim(), details:t.details || [], who:typeof t.who === 'string' ? t.who : '', createdAt:Number.isFinite(t.createdAt) ? t.createdAt : Date.now(), since:Number.isFinite(t.since) ? t.since : Date.now(), checkDays:[1,2,3,7].includes(t.checkDays) ? t.checkDays : 2, done:!!t.done, deletedAt:Number.isFinite(t.deletedAt) ? t.deletedAt : null, lastComparedAt:Number.isFinite(t.lastComparedAt) ? t.lastComparedAt : 0};
   });
-  return clean({...emptyState(), ...input, v:3, tasks, revision:Number.isSafeInteger(input.revision) ? input.revision : 0, theme:input.theme === 'dark' ? 'dark' : 'light', deck:Array.isArray(input.deck) ? input.deck : [], flagged:Array.isArray(input.flagged) ? input.flagged : []});
+  return clean({...emptyState(), ...input, v:3, tasks, revision:Number.isSafeInteger(input.revision) ? input.revision : 0, theme:'light', deck:Array.isArray(input.deck) ? input.deck : [], flagged:Array.isArray(input.flagged) ? input.flagged : []});
 }
 
 function clean(s) {
@@ -51,7 +52,9 @@ export function applyAction(previous, action, now = Date.now()) {
     case 'add': {
       const parsed = action.kind === 'wait' ? parseWho(action.title) : {title:action.title.trim(),who:''};
       if (!parsed.title) throw Error('Give the task a title.');
-      s.tasks.push({id:action.id, ...parsed, kind:action.kind, details:[], createdAt:now, since:now, checkDays:2, done:false, lastComparedAt:0});
+      const details=action.details ?? [];
+      if (!Array.isArray(details)||details.length>DETAIL_MAX||details.some(x=>typeof x!=='string'||x.length>DETAIL_LEN)) throw Error('Keep notes to five lines, 120 characters each.');
+      s.tasks.push({id:action.id, ...parsed, who:action.kind==='wait' ? (action.who?.trim() || parsed.who) : '', kind:action.kind, details:details.map(x=>x.trim()).filter(Boolean), createdAt:now, since:now, checkDays:action.checkDays || 2, done:false, lastComparedAt:0});
       message = action.kind === 'wait' ? 'Added to waiting on' : 'Task captured'; break;
     }
     case 'edit': {
@@ -94,7 +97,7 @@ export function applyAction(previous, action, now = Date.now()) {
       for (const id of action.ids) {const item=s.tasks.find(x=>x.id===id); if(item) item.lastComparedAt=now;}
       break;
     }
-    case 'theme': s.theme=action.theme; break;
+    case 'theme': s.theme='light'; break;
     case 'import': {
       const incoming=normalize(action.state);
       const existing=new Set(s.tasks.map(x=>x.id));

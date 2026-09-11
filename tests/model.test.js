@@ -71,3 +71,8 @@ test('editing guards against another tab changing the same task',()=>{
 test('follow-ups sort by due time rather than delegation age',()=>{
  const slow={since:1000,checkDays:7};const urgent={since:1000+4*DAY,checkDays:1};assert.ok(dueAt(urgent)<dueAt(slow));
 });
+
+test('stored dark preference loads in light mode without losing tasks',()=>{
+ const s=add(emptyState(),'a','Keep this card');s.theme='dark';
+ const loaded=normalize(s);assert.equal(loaded.theme,'light');assert.equal(loaded.tasks[0].title,'Keep this card');
+});

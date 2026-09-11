@@ -62,3 +62,12 @@ This app uses your Vercel and Upstash accounts. Provider pricing and storage/com
 23 automated tests pass, covering model behavior, original local migration, API authorization, forged cookies, cookie flags/expiry, password changes, rate limiting, cross-origin refusal, shared reads, concurrent writes, deduplication, guarded undo, logout, and database failures.
 
 The server tests use a Redis REST contract double. They do not substitute for a live Upstash/Vercel check. The production frontend build passes. Real database connectivity, Vercel function deployment, and browser/device end-to-end behavior must be checked after configuration using the short walkthrough in SETUP.md.
+
+## September 2026 interface update
+
+- Click the bottom capture bar to enter a title and optional notes together. Waiting cards also allow an owner and follow-up window.
+- SharePoint in the top bar opens the Team BPM Clients folder in a new tab.
+- In the periphery shows the complete remaining stack in a scrollable area.
+- The interface always uses light mode, including browsers that previously selected dark mode.
+
+Redeploy this complete project to the existing Vercel project. No new environment variables or database migration are required. Keep the existing password and database environment variables. Deploy the source project, not only the dist folder, so the API functions are included.
