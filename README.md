@@ -89,3 +89,7 @@ References:
 - https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Set-Cookie
 
 Validation: 27 automated tests pass and the production build succeeds. Browser print dialogs and physical printer output have not been tested in this environment.
+
+## Periphery shortcuts
+
+Each periphery card now has Flag (toggle), Put on deck, and Make it now buttons below its title. Flagged buttons are highlighted. On phones the periphery uses the full rail width for readable titles and touch targets. The existing two-card deck limit and displacement/undo behavior apply.
