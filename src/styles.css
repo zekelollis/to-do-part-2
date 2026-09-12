@@ -11,3 +11,11 @@
 [hidden]{display:none!important}
 
 .sharepoint-link{display:inline-flex;align-items:center;gap:7px;color:var(--muted);font-size:14px;text-decoration:none;min-height:40px;padding:6px 8px;white-space:nowrap}.sharepoint-link:hover{color:var(--brass)}.sharepoint-link:focus-visible{outline:2px solid var(--brass);outline-offset:3px}.capture-trigger{flex:1;display:flex;justify-content:space-between;min-width:0;min-height:48px;border:0;font-size:16px;color:var(--muted);padding:10px 8px;text-align:left}.capture-trigger svg{color:var(--ink)}.periphery-scroll{max-height:360px;overflow-y:auto;overflow-x:hidden;scrollbar-gutter:stable;scrollbar-width:thin;scrollbar-color:#a59b83 transparent;padding-right:6px}.periphery-scroll:focus-visible{outline:2px solid var(--brass);outline-offset:4px}@media(max-width:760px){.periphery-scroll{max-height:300px}.header-tools .sharepoint-link{font-size:13px;padding:6px 2px}.capture-trigger{font-size:16px;padding:10px 3px}.capture-kind{flex-shrink:0}}
+
+/* Navigation stays together and wraps cleanly on narrow screens. */
+.header nav{flex-wrap:wrap;column-gap:24px;row-gap:0;min-width:0}
+.header nav button{white-space:nowrap;flex-shrink:0}
+.header nav .sharepoint-link{padding:8px 0;min-height:44px;font-size:15px}
+.card-top-actions{display:flex;align-items:center;gap:18px}
+@media(min-width:761px) and (max-width:1100px){.header{gap:24px}.header nav{column-gap:18px}.header-tools .today{display:none}}
+@media(max-width:760px){.header nav{column-gap:20px;padding-bottom:8px}.header nav .sharepoint-link{font-size:14px}.card-top-actions{gap:14px}}

@@ -71,3 +71,21 @@ The server tests use a Redis REST contract double. They do not substitute for a 
 - The interface always uses light mode, including browsers that previously selected dark mode.
 
 Redeploy this complete project to the existing Vercel project. No new environment variables or database migration are required. Keep the existing password and database environment variables. Deploy the source project, not only the dist folder, so the API functions are included.
+
+## September 12 update: navigation and printing
+
+SharePoint now follows Waiting on in the navigation. On narrow screens the navigation can wrap to keep every link reachable.
+
+Use **Print** on the Focus card, or open any card and choose **Print card** in its actions. Save or cancel edits first. A separate print window contains only that saved card's title, notes, status, and (for waiting cards) owner. The browser print dialog supports a printer or Save as PDF. If pop-ups are blocked, allow them for To-Do and retry. Canceling the print dialog leaves the preview open with Print and Close buttons. Printing does not complete or change the card.
+
+Redeploy the complete project to the same Vercel project. No environment changes or database migration are needed.
+
+### SharePoint embedding assessment
+
+Embedding is not enabled in this release. The existing Vercel headers explicitly deny framing (`X-Frame-Options: DENY`, CSP `frame-ancestors 'none'`), and authentication uses `SameSite=Strict` cookies that will not accompany cross-site embedded requests. A working embed would require a narrow SharePoint framing allowlist and an authentication approach tested against browser third-party-cookie restrictions, plus SharePoint's permission to embed the app domain. A dashboard Quick Link opening To-Do in a new tab is the straightforward option.
+
+References:
+- https://support.microsoft.com/en-us/sharepoint/sites-pages/add-content-to-your-page-using-the-embed-web-part
+- https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Set-Cookie
+
+Validation: 27 automated tests pass and the production build succeeds. Browser print dialogs and physical printer output have not been tested in this environment.
