@@ -93,3 +93,13 @@ Validation: 27 automated tests pass and the production build succeeds. Browser p
 ## Periphery shortcuts
 
 Each periphery card now has Flag (toggle), Put on deck, and Make it now buttons below its title. Flagged buttons are highlighted. On phones the periphery uses the full rail width for readable titles and touch targets. The existing two-card deck limit and displacement/undo behavior apply.
+
+## Claim links and local attachments (September 22)
+
+- Add an optional HTTPS claim SharePoint link when creating or editing a card. Use **Open claim file** from Focus or card details. Links sync with the shared tasks; SharePoint still controls access.
+- Create a card first, then open its details to use **Attachments**. Choose files or drop files into the attachment area. Files save immediately, independently of Save changes / Cancel in the card editor.
+- Classic Outlook: if a direct drag does not provide a file, save the message as an Outlook .msg file and choose or drag that saved file. Download the attachment, then open it in Outlook. It is a copy, not a shortcut to the original conversation.
+- Attachments stay in this browser profile on this computer and this app address. They are not uploaded, synced, encrypted by this app, or included in JSON task backups. Clearing browser storage can remove them. Keep originals. A changed deployment hostname uses separate browser storage; use your usual production address.
+- Limits: 20 MB per file; 10 files and 100 MB per card, subject to browser storage space. Failed batches do not partially save. Removing a file deletes the local copy after confirmation. Completing or trashing a card retains attachments so they remain available in History.
+- No new services, environment variables, or database migration are required. Redeploy the complete project as before.
+- Validation: automated model, API, storage, print and attachment tests plus production build. Direct dragging from Windows Outlook and opening downloaded .msg files must be checked on your PC; they were not tested in this environment.

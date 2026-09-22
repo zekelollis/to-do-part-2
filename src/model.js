@@ -11,6 +11,15 @@ export const dueAt = t => (t.since || t.createdAt) + (t.checkDays || 2) * DAY;
 export const emptyState = () => ({v:3, revision:0, tasks:[], deck:[], flagged:[], nowId:null, nowSetAt:0, nowReason:'', theme:'light'});
 export const newId = () => crypto.randomUUID();
 
+export function claimLink(value) {
+  if(value == null || value === '') return '';
+  if(typeof value !== 'string' || value.length > 4096) throw Error('Use a valid HTTPS claim link (up to 4096 characters).');
+  const text=value.trim(); if(!text)return '';
+  let url;try{url=new URL(text);}catch{throw Error('Paste the complete HTTPS claim link.');}
+  if(url.protocol !== 'https:' || url.username || url.password) throw Error('Use an HTTPS claim link without embedded credentials.');
+  return url.href;
+}
+
 export function parseWho(raw) {
   // Only a standalone @name token is an owner; never consume an email.
   const match = raw.match(/(?:^|\s)@([\p{L}\p{N}_.'-]+)(?=\s|$)/u);
@@ -26,7 +35,7 @@ export function normalize(input) {
     if (!t || typeof t.id !== 'string' || !t.id || seen.has(t.id) || typeof t.title !== 'string' || !t.title.trim() || !['do','wait'].includes(t.kind)) throw Error('The backup contains an invalid or duplicate task. Nothing was imported.');
     if (t.details != null && (!Array.isArray(t.details) || t.details.some(x=>typeof x !== 'string'))) throw Error('The backup contains invalid notes. Nothing was imported.');
     seen.add(t.id);
-    return {...t, title:t.title.trim(), details:t.details || [], who:typeof t.who === 'string' ? t.who : '', createdAt:Number.isFinite(t.createdAt) ? t.createdAt : Date.now(), since:Number.isFinite(t.since) ? t.since : Date.now(), checkDays:[1,2,3,7].includes(t.checkDays) ? t.checkDays : 2, done:!!t.done, deletedAt:Number.isFinite(t.deletedAt) ? t.deletedAt : null, lastComparedAt:Number.isFinite(t.lastComparedAt) ? t.lastComparedAt : 0};
+    return {...t, claimUrl:claimLink(t.claimUrl), title:t.title.trim(), details:t.details || [], who:typeof t.who === 'string' ? t.who : '', createdAt:Number.isFinite(t.createdAt) ? t.createdAt : Date.now(), since:Number.isFinite(t.since) ? t.since : Date.now(), checkDays:[1,2,3,7].includes(t.checkDays) ? t.checkDays : 2, done:!!t.done, deletedAt:Number.isFinite(t.deletedAt) ? t.deletedAt : null, lastComparedAt:Number.isFinite(t.lastComparedAt) ? t.lastComparedAt : 0};
   });
   return clean({...emptyState(), ...input, v:3, tasks, revision:Number.isSafeInteger(input.revision) ? input.revision : 0, theme:'light', deck:Array.isArray(input.deck) ? input.deck : [], flagged:Array.isArray(input.flagged) ? input.flagged : []});
 }
@@ -54,14 +63,14 @@ export function applyAction(previous, action, now = Date.now()) {
       if (!parsed.title) throw Error('Give the task a title.');
       const details=action.details ?? [];
       if (!Array.isArray(details)||details.length>DETAIL_MAX||details.some(x=>typeof x!=='string'||x.length>DETAIL_LEN)) throw Error('Keep notes to five lines, 120 characters each.');
-      s.tasks.push({id:action.id, ...parsed, who:action.kind==='wait' ? (action.who?.trim() || parsed.who) : '', kind:action.kind, details:details.map(x=>x.trim()).filter(Boolean), createdAt:now, since:now, checkDays:action.checkDays || 2, done:false, lastComparedAt:0});
+      s.tasks.push({id:action.id, claimUrl:claimLink(action.claimUrl), ...parsed, who:action.kind==='wait' ? (action.who?.trim() || parsed.who) : '', kind:action.kind, details:details.map(x=>x.trim()).filter(Boolean), createdAt:now, since:now, checkDays:action.checkDays || 2, done:false, lastComparedAt:0});
       message = action.kind === 'wait' ? 'Added to waiting on' : 'Task captured'; break;
     }
     case 'edit': {
       if (action.expectedTask && JSON.stringify(t)!==action.expectedTask) throw Error('This task changed in another tab. Reopen it before editing so those changes are kept.');
       if (!action.title.trim()) throw Error('Give the task a title.');
       if (action.details.length > DETAIL_MAX || action.details.some(x=>x.length > DETAIL_LEN)) throw Error('Keep notes to five lines, 120 characters each.');
-      update({title:action.title.trim(), who:action.who.trim(), details:action.details.map(x=>x.trim()).filter(Boolean), checkDays:action.checkDays}); message='Changes saved'; break;
+      update({claimUrl:action.claimUrl===undefined ? (t.claimUrl||'') : claimLink(action.claimUrl), title:action.title.trim(), who:action.who.trim(), details:action.details.map(x=>x.trim()).filter(Boolean), checkDays:action.checkDays}); message='Changes saved'; break;
     }
     case 'done': update({done:true, completedAt:now}); message=t.kind === 'wait' ? 'Landed. One less loose end.' : 'Done. Nicely handled.'; break;
     case 'drop': update({deletedAt:now}); message='Moved to trash'; break;

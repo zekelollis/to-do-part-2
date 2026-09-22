@@ -1,5 +1,5 @@
 import {createHash,randomBytes,timingSafeEqual} from 'node:crypto';
-import {emptyState,normalize,applyAction} from '../src/model.js';
+import {emptyState,normalize,applyAction,claimLink} from '../src/model.js';
 export const SESSION_SECONDS=90*24*60*60;
 export const COOKIE='__Host-todo-session';
 const digest=value=>createHash('sha256').update(value).digest('hex');
@@ -79,6 +79,7 @@ export function validateAction(a){
  if(!types.includes(a.type))throw new HttpError(400,'Unknown task action.');
  if(!['theme','import','undo'].includes(a.type) && (typeof a.id!=='string'||a.id.length>100))throw new HttpError(400,'Choose a valid task.');
  if(['add','edit'].includes(a.type) && (typeof a.title!=='string'||!a.title.trim()||a.title.length>500))throw new HttpError(400,'Use a task title of 1–500 characters.');
+ if(['add','edit'].includes(a.type)){try{claimLink(a.claimUrl);}catch(e){throw new HttpError(400,e.message);}}
  if(a.type==='add'&&!['do','wait'].includes(a.kind))throw new HttpError(400,'Choose a task type.');
  if(a.type==='add' && ((a.details!==undefined&&(!Array.isArray(a.details)||a.details.length>5||a.details.some(x=>typeof x!=='string'||x.length>120)))||(a.who!==undefined&&(typeof a.who!=='string'||a.who.length>100))||(a.checkDays!==undefined&&![1,2,3,7].includes(a.checkDays))))throw new HttpError(400,'Check the new card’s notes and follow-up window.');
  if(a.type==='edit' && (typeof a.who!=='string'||a.who.length>100||!Array.isArray(a.details)||a.details.length>5||a.details.some(x=>typeof x!=='string'||x.length>120)||![1,2,3,7].includes(a.checkDays)))throw new HttpError(400,'Check the task’s notes and follow-up window.');
