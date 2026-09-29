@@ -1,3 +1,7 @@
+# Planning edition
+
+Start with **START-HERE.md** for deployment and the Inbox → Today → Focus workflow. Earlier release notes follow.
+
 # To-Do — shared edition
 
 The same focus desk, now with shared tasks and server-verified sign-in. Start with **SETUP.md** before deploying this version.

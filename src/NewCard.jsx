@@ -1,19 +1,22 @@
 import React,{useRef,useState} from 'react';
 import {Modal,Icon} from './components';
 import {claimLink,newId,DETAIL_MAX,DETAIL_LEN} from './model';
-export default function NewCard({initialKind,act,onClose,busy,pendingSave,retrySave,error}){
+export default function NewCard({initialKind,initialTitle='',onSaved,act,onClose,busy,pendingSave,retrySave,error}){
  const id=useRef(newId());
+ const [destination,setDestination]=useState('inbox'),[reviewDate,setReviewDate]=useState('');
  const [claimUrl,setClaimUrl]=useState('');
- const [title,setTitle]=useState(''),[kind,setKind]=useState(initialKind),[who,setWho]=useState(''),[days,setDays]=useState(2),[notes,setNotes]=useState(['']);
+ const [title,setTitle]=useState(initialTitle),[kind,setKind]=useState(initialKind),[who,setWho]=useState(''),[days,setDays]=useState(2),[notes,setNotes]=useState(['']);
  const [saving,setSaving]=useState(false),[discard,setDiscard]=useState(false),[message,setMessage]=useState('');
  const blocked=saving||busy||pendingSave;
- const dirty=claimUrl.trim()||title.trim()||who.trim()||notes.some(x=>x.trim());
+ const dirty=reviewDate||destination!=='inbox'||claimUrl.trim()||title.trim()||who.trim()||notes.some(x=>x.trim());
  const close=()=>{if(blocked){setMessage('Please finish or retry the pending save before closing this card.');return;}if(dirty)setDiscard(true);else onClose();};
- const submit=async e=>{e.preventDefault();if(blocked)return;try{claimLink(claimUrl);}catch(err){setMessage(err.message);return;}setSaving(true);setMessage('');const ok=await act({type:'add',id:id.current,title,kind,claimUrl,who,checkDays:days,details:notes.filter(x=>x.trim())});setSaving(false);if(ok)onClose();else setMessage('The card could not be saved. Your title and notes are still here.');};
+ const submit=async e=>{e.preventDefault();if(blocked)return;try{claimLink(claimUrl);}catch(err){setMessage(err.message);return;}setSaving(true);setMessage('');const ok=await act({type:'add',id:id.current,title,kind,claimUrl,destination,reviewDate,who,checkDays:days,details:notes.filter(x=>x.trim())});setSaving(false);if(ok)(onSaved||onClose)();else setMessage('The card could not be saved. Your title and notes are still here.');};
  return <Modal title="New card" onClose={close}>{discard?<div className="discard"><h3>Keep this draft?</h3><p>The card hasn’t been added yet.</p><div className="button-row"><button onClick={()=>setDiscard(false)}>Keep editing</button><button className="danger" onClick={onClose}>Discard draft</button></div></div>:<form className="editor" onSubmit={submit}>
  <label>Title<input autoFocus required maxLength={500} disabled={blocked} value={title} onChange={e=>setTitle(e.target.value)} placeholder="What needs doing?"/></label>
  <label>Where it belongs<select value={kind} disabled={blocked} onChange={e=>setKind(e.target.value)}><option value="do">Mine</option><option value="wait">Waiting on</option></select></label>
  {kind==='wait'&&<div className="field-pair"><label>Who has it?<input maxLength={100} disabled={blocked} value={who} onChange={e=>setWho(e.target.value)} placeholder="Name (optional)"/></label><label>Check back<select value={days} disabled={blocked} onChange={e=>setDays(Number(e.target.value))}>{[1,2,3,7].map(n=><option key={n} value={n}>Every {n} day{n===1?'':'s'}</option>)}</select></label></div>}
+ {kind==='do'&&<label>When to decide<select disabled={blocked} value={destination} onChange={e=>setDestination(e.target.value)}><option value="inbox">Inbox (decide later)</option><option value="today">Do today</option></select></label>}
+ <label>{kind==='wait'?'Follow up on':'Review on (optional)'}<input type="date" disabled={blocked} value={reviewDate} onChange={e=>setReviewDate(e.target.value)}/></label>
  <label>Claim SharePoint link (optional)<input type="url" maxLength={4096} disabled={blocked} value={claimUrl} onChange={e=>setClaimUrl(e.target.value)} placeholder="https://…"/></label>
  <p className="attachment-hint">To attach an email or file, create the card, then open its details.</p>
  <div className="notes-heading"><span>Notes</span><span className="muted">Optional · up to five short lines</span></div>

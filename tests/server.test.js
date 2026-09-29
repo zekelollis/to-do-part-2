@@ -93,3 +93,15 @@ test('new card notes and follow-up fields persist together across devices',async
  const bad=await change(a,{type:'add',id:'bad',title:'Invalid notes',kind:'do',details:['x'.repeat(121)]});
  assert.equal(bad.statusCode,400);assert.equal((await call(tasksHandler,{cookie:b})).body.state.tasks.length,1);
 });
+
+test('planning and interruption persist across devices and undo restores the plan',async()=>{
+ const a=await signIn('192.0.2.1'),b=await signIn('192.0.2.2');
+ await change(a,{type:'add',id:'plan-a',title:'A',kind:'do',destination:'today'});
+ await change(b,{type:'add',id:'plan-b',title:'B',kind:'do'});
+ let read=await call(tasksHandler,{cookie:a});assert.equal(read.body.state.nowId,'plan-a');assert.equal(read.body.state.tasks[1].inbox,true);
+ const interrupted=await change(b,{type:'interrupt',id:'plan-b',expectedNowId:'plan-a',resumeNote:'Continue paragraph two'});
+ assert.equal(interrupted.statusCode,200);read=await call(tasksHandler,{cookie:a});assert.equal(read.body.state.nowId,'plan-b');assert.deepEqual(read.body.state.resumeIds,['plan-a']);
+ const undo=await change(a,{type:'undo',expectedRevision:interrupted.body.state.revision,previous:interrupted.body.previous});assert.equal(undo.statusCode,200);assert.equal(undo.body.state.nowId,'plan-a');assert.equal(undo.body.state.tasks[1].inbox,true);
+ const invalid=await change(a,{type:'plan',id:'plan-b',destination:'later',reviewDate:'2026-02-30'});assert.equal(invalid.statusCode,400);
+ const scheduled=await change(a,{type:'plan',id:'plan-b',destination:'later',reviewDate:'2026-10-01'});assert.equal(scheduled.statusCode,200);read=await call(tasksHandler,{cookie:b});assert.equal(read.body.state.tasks[1].reviewDate,'2026-10-01');
+});

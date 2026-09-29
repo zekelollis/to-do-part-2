@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {emptyState,applyAction,parseWho,normalize,shuffleCandidates,mine,DAY,dueAt} from '../src/model.js';
-const add=(s,id,title=id,kind='do')=>applyAction(s,{type:'add',id,title,kind},1000).state;
+const NOW=Date.now();
+const add=(s,id,title=id,kind='do')=>applyAction(s,{type:'add',id,title,kind,destination:'today'},NOW).state;
 test('ordinary capture preserves mentions and email addresses',()=>{
  const s=add(emptyState(),'a','Email jane@example.com and @Alex');
  assert.equal(s.tasks[0].title,'Email jane@example.com and @Alex');
@@ -11,8 +12,8 @@ test('ordinary capture preserves mentions and email addresses',()=>{
 test('completion advances the deck; dropping and restoring retain notes',()=>{
  let s=add(add(add(emptyState(),'a'),'b'),'c');
  s=applyAction(s,{type:'deck',id:'c'}).state;
- s=applyAction(s,{type:'done',id:'a'},2000).state;
- assert.equal(s.nowId,'c');assert.equal(s.tasks[0].completedAt,2000);assert.deepEqual(s.deck,[]);
+ s=applyAction(s,{type:'done',id:'a'},NOW+1000).state;
+ assert.equal(s.nowId,'c');assert.equal(s.tasks[0].completedAt,NOW+1000);assert.deepEqual(s.deck,[]);
  s=applyAction(s,{type:'edit',id:'c',title:'C',who:'',details:['Keep this'],checkDays:2}).state;
  s=applyAction(s,{type:'drop',id:'c'}).state;
  assert.equal(s.nowId,'b');assert.equal(mine(s).length,1);
@@ -30,15 +31,15 @@ test('handoff clears attention slots and ownership can be removed',()=>{
 });
 test('shuffle winner follows this round, regardless of historical weight',()=>{
  let s=add(add(emptyState(),'a'),'b');s.tasks[0].weight=200;
- s=applyAction(s,{type:'shuffleChoice',ids:['a','b'],id:'b',final:true},2000).state;
- assert.equal(s.nowId,'b');assert.equal(s.tasks[0].lastComparedAt,2000);
+ s=applyAction(s,{type:'shuffleChoice',ids:['a','b'],id:'b',final:true},NOW+1000).state;
+ assert.equal(s.nowId,'b');assert.equal(s.tasks[0].lastComparedAt,NOW+1000);
 });
 test('every task is sampled across successive rounds',()=>{
  let s=emptyState();for(let i=0;i<20;i++)s=add(s,String(i));
  const seen=new Set();
  for(let r=0;r<5;r++){
   const candidates=shuffleCandidates(s);candidates.forEach(t=>seen.add(t.id));
-  for(let i=1;i<candidates.length;i++)s=applyAction(s,{type:'shuffleChoice',ids:[candidates[0].id,candidates[i].id],id:candidates[0].id,final:i===candidates.length-1},2000+r).state;
+  for(let i=1;i<candidates.length;i++)s=applyAction(s,{type:'shuffleChoice',ids:[candidates[0].id,candidates[i].id],id:candidates[0].id,final:i===candidates.length-1},NOW+1000+r).state;
  }
  assert.equal(seen.size,20);
 });
